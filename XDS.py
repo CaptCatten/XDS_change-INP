@@ -1,5 +1,6 @@
 import os
-
+#DO NOT MOVE ANY FILES VIA THE UI WHEN THE CODE IS RUNNING!!!
+#this will not run XDS it will only changes the XDS file. 
 # Define the root directory
 root_dir = '/home/napasornnilparuk/p97/EMBL_20240425/PROCESSED_DATA'  # Change this to the root directory where your folders are located
 
@@ -39,7 +40,8 @@ for root, dirs, files in os.walk(root_dir):
                     # Make changes
                     for j in range(len(lines)):  
                         if lines[j].startswith("NAME_TEMPLATE_OF_DATA_FRAMES="):
-                            lines[j] = "NAME_TEMPLATE_OF_DATA_FRAMES= /Data/Obilix_DataSafe2/BeamlineData/EMBL/20240425/RAW_DATA/SHP-202_DS/SAMI-SHP-202_1_?????.cbf.gz\n" #change this to the full path of your data, case-sensitive
+                            lines[j] = "NAME_TEMPLATE_OF_DATA_FRAMES= /Data/Obilix_DataSafe2/BeamlineData/EMBL/20240425/RAW_DATA/SHP-202_DS/SAMI-SHP-202_1_?????.cbf.gz\n" 
+                            #change this to the full path of your data, case-sensitive. This will calls the files into the current folder that the script is running. 
                         elif lines[j].startswith("UNIT_CELL_CONSTANTS=") or \
                                 lines[j].startswith("LIB=") or \
                                 lines[j].startswith("MAXIMUM_NUMBER_OF_JOBS="):
