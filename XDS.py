@@ -1,13 +1,14 @@
 import os
 #DO NOT MOVE ANY FILES VIA THE UI WHEN THE CODE IS RUNNING!!!
-#this will not run XDS it will only changes the XDS file. 
+#this will not run XDS it will only changes the XDS input file. 
 # Define the root directory
 root_dir = '/home/napasornnilparuk/p97/EMBL_20240425/PROCESSED_DATA'  # Change this to the root directory where your folders are located
+Prefix = 'SHP-'
 
 # Loop through folders and subfolders
 for root, dirs, files in os.walk(root_dir):
     for folder in dirs:
-        if folder.startswith("SHP-"): #change this parametre to the suitable file initial. The rest will be left bank so the scrip will loop to all the files with that initial. 
+        if folder.startswith(Prefix): #change this parametre to the suitable file initial. The rest will be left bank so the scrip will loop to all the files with that initial. 
             print(f"Processing folder: {folder}")
             folder_path = os.path.join(root, folder)
             # You do not need the max loop number. os.walk will find the files that have the initial by itself :3 
