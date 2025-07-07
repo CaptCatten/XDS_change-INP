@@ -34,7 +34,7 @@ def transform_xds_inp_auto_template(
     try:
         name_template_path = find_name_template_in_raw_data(raw_data_base_dir, prefix_hint)
     except FileNotFoundError as e:
-        print(f"⚠ {e}")
+        print(f"{e}")
         return
 
     with open(input_path, 'r') as f:
