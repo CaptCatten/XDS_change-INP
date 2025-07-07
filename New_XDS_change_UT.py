@@ -18,7 +18,9 @@ def transform_xds_inp_auto_template(
     input_path, output_path, base_data_dir, 
     prefix_hint=None,
     space_group_number=None,
-    unit_cell_constants=None
+    unit_cell_constants=None,
+    data_range=None,
+    spot_range=None
 ):
     print(f"\n🛠 Processing file: {input_path}")
     
@@ -90,7 +92,7 @@ def transform_xds_inp_auto_template(
         f.writelines(new_lines)
     print(f"Written modified file: {output_path}")
 
-def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, unit_cell_constants=None):
+def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, unit_cell_constants=None, data_range=None, spot_range=None):
     print(f"\n Starting batch processing in: {root_dir}\n")
     for subdir, _, files in os.walk(root_dir):
         if "XDS.INP" in files:
@@ -102,7 +104,8 @@ def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, 
                 prefix_hint=prefix_hint,
                 space_group_number=space_group_number,
                 unit_cell_constants=unit_cell_constants,
-                data_range=data_range
+                data_range=data_range,
+                spot_range=spot_range
             )
     print(f"\n Batch processing complete.")
 
@@ -110,8 +113,8 @@ def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, 
 root_directory = "/home/napasornnilparuk/Desktop/Re_scale_set4"
 
 # Optional parameters — set to None if not needed
-space_group_number = "19"  # change to the desire space group
-unit_cell_constants = "87.6 122.0 98.3 90 98.1 90"  # change to the correct constants based on the space group
+space_group_number = "0"  # change to the desire space group
+unit_cell_constants = "70 80 90 90 90 90"  # change to the correct constants based on the space group
 spot_range = "1 3600" #change to the desire spot range
 data_range = "1 3600" #change to the desire data range
 
@@ -120,5 +123,6 @@ batch_process_xds_inps(
     prefix_hint=None,  # or a prefix like "TRIM72"
     space_group_number=space_group_number,
     unit_cell_constants=unit_cell_constants,
-    data_range=data_range
+    data_range=data_range,
+    spot_range=spot_range
 )
