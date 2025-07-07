@@ -27,9 +27,10 @@ for i in range(1, max_value + 1):
             
             # Run CCP4 programs
             print(f"Running ccp4 {i}")
-            os.system("/home/bothe/Programs/ccp4-7.0/bin/pointless XDS_ASCII.HKL")
-            os.system("/home/bothe/Programs/ccp4-7.0/bin/pointless -copy XDS_ASCII.HKL hklout XDS_ASCII.mtz")
-            os.system("/home/bothe/Programs/ccp4-7.0/bin/aimless HKLIN XDS_ASCII.mtz HKLOUT Merged.mtz XMLOUT XDS.xml ONLYMERGE --no-input")
+            os.system("/home/bothe/Programs/ccp4-7.0/bin/pointless XDS_ASCII.HKL > pointless1.log 2>&1")
+            os.system("/home/bothe/Programs/ccp4-7.0/bin/pointless -copy XDS_ASCII.HKL hklout XDS_ASCII.mtz > pointless2.log 2>&1")
+            os.system("/home/bothe/Programs/ccp4-7.0/bin/aimless HKLIN XDS_ASCII.mtz HKLOUT Merged.mtz XMLOUT XDS.xml ONLYMERGE --no-input > aimless.log 2>&1")
+
             print("end")
             # Exit subfolder
             os.chdir('..')
