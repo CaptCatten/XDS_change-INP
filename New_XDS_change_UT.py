@@ -45,13 +45,13 @@ def transform_xds_inp_auto_template(
         if stripped.startswith("DETECTOR= PILATUS"):
             print(f"Replacing DETECTOR line with EIGER")
             new_lines.append("DETECTOR= EIGER\n")
-            new_lines.append("MINIMUM_VALID_PIXEL_VALUE=0 OVERLOAD= 239990 !PILATUS\n")
+            new_lines.append("MINIMUM_VALID_PIXEL_VALUE=0 OVERLOAD= 239990\n")
             continue
 
         # FRIEDEL'S_LAW
         if stripped.startswith("FRIEDEL'S_LAW="):
             print(f"Changing FRIEDEL'S_LAW to TRUE")
-            new_lines.append("FRIEDEL'S_LAW=TRUE ! This acts only on the CORRECT step\n")
+            new_lines.append("FRIEDEL'S_LAW=TRUE\n")
             continue
 
         # STRONG_PIXEL comment
@@ -62,20 +62,26 @@ def transform_xds_inp_auto_template(
 
         # SPOT_RANGE
         if stripped.startswith("SPOT_RANGE="):
-            print(f"Normalizing SPOT_RANGE to 1 3600")
-            new_lines.append("SPOT_RANGE=1 3600\n")
+            print(f"change SPOT_RANGE to {spot_range}")
+            new_lines.append(f"SPOT_RANGE={spot_range}\n")
+            continue
+            
+        # DATA_RANGE
+        if stripped.startswith("DATA_RANGE="):
+            print(f"change DATA_RANGE to {data_range}")
+            new_lines.append(f"DATA_RANGE={data_range}\n")
             continue
 
         # SPACE_GROUP_NUMBER
         if stripped.startswith("SPACE_GROUP_NUMBER=") and space_group_number is not None:
             print(f"Replacing SPACE_GROUP_NUMBER with {space_group_number}")
-            new_lines.append(f"SPACE_GROUP_NUMBER={space_group_number} ! set by script\n")
+            new_lines.append(f"SPACE_GROUP_NUMBER={space_group_number}\n")
             continue
 
         # UNIT_CELL_CONSTANTS
         if stripped.startswith("UNIT_CELL_CONSTANTS=") and unit_cell_constants is not None:
             print(f"Replacing UNIT_CELL_CONSTANTS with {unit_cell_constants}")
-            new_lines.append(f"UNIT_CELL_CONSTANTS= {unit_cell_constants} ! set by script\n")
+            new_lines.append(f"UNIT_CELL_CONSTANTS= {unit_cell_constants}\n")
             continue
 
         new_lines.append(line)
@@ -95,7 +101,8 @@ def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, 
                 inp_path, out_path, subdir,
                 prefix_hint=prefix_hint,
                 space_group_number=space_group_number,
-                unit_cell_constants=unit_cell_constants
+                unit_cell_constants=unit_cell_constants,
+                data_range=data_range
             )
     print(f"\n Batch processing complete.")
 
@@ -103,12 +110,15 @@ def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, 
 root_directory = "/home/napasornnilparuk/Desktop/Re_scale_set4"
 
 # Optional parameters — set to None if not needed
-sg_number = "19"  # e.g. "19", or None
-uc_constants = "87.6 122.0 98.3 90 98.1 90"  # e.g., your known values, or None
+space_group_number = "19"  # change to the desire space group
+unit_cell_constants = "87.6 122.0 98.3 90 98.1 90"  # change to the correct constants based on the space group
+spot_range = "1 3600" #change to the desire spot range
+data_range = "1 3600" #change to the desire data range
 
 batch_process_xds_inps(
     root_directory,
     prefix_hint=None,  # or a prefix like "TRIM72"
-    space_group_number=sg_number,
-    unit_cell_constants=uc_constants
+    space_group_number=space_group_number,
+    unit_cell_constants=unit_cell_constants,
+    data_range=data_range
 )
