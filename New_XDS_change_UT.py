@@ -2,7 +2,7 @@ import os
 import re
 
 def find_name_template(base_dir, prefix_hint=None):
-    print(f"🔍 Searching for .cbf.gz file in: {base_dir}")
+    print(f"Searching for .cbf.gz file in: {base_dir}")
     for root, _, files in os.walk(base_dir):
         for file in files:
             if file.endswith(".cbf.gz"):
@@ -22,12 +22,12 @@ def transform_xds_inp_auto_template(
     data_range=None,
     spot_range=None
 ):
-    print(f"\n🛠 Processing file: {input_path}")
+    print(f"\n Processing file: {input_path}")
     
     try:
         name_template_path = find_name_template(base_data_dir, prefix_hint)
     except FileNotFoundError as e:
-        print(f"⚠ {e}")
+        print(f"{e}")
         return
 
     with open(input_path, 'r') as f:
