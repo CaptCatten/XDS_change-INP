@@ -16,7 +16,7 @@ with open("dimple_results.dat", "w") as w, open("dimple_results_filtered.dat", "
     for folder in sorted(glob.glob(prefix)):
         if not os.path.isdir(folder):
             continue
-        print(f"==================== PROCESSING {folder} ====================")
+        print(f"==================== PROCESSING {os.path.abspath(folder)} ====================")
 
         # Walk through all subdirectories and files
         for root, dirs, files in os.walk(folder):
