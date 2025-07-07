@@ -3,13 +3,13 @@ import re
 
 # --- User Configuration ---
 # If you do not want change, keep the variable as "None"
-RAW_DATA_BASE_DIR = "/path/to/raw/data"         # e.g. "/mnt/data/xtal_images"
-PREFIX_HINT = None                              # e.g. "dataset1_"
-SPACE_GROUP_NUMBER = None                       # e.g. 19
-UNIT_CELL_CONSTANTS = None                      # e.g. "70.1 80.2 90.3 90 90 90"
-DATA_RANGE = None                               # e.g. "1 900"
-SPOT_RANGE = None                               # e.g. "1 100"
-ROOT_DIR = "/path/to/xds/projects"              # Folder containing multiple XDS.INP files
+RAW_DATA_BASE_DIR = "/media/lauren/T7/trim72"        
+PREFIX_HINT = None                              
+SPACE_GROUP_NUMBER = "REEEEEE"                      
+UNIT_CELL_CONSTANTS = "REEEEE"                    
+DATA_RANGE = "REEEEEE"                              
+SPOT_RANGE = "REEEEEEE"                              
+ROOT_DIR = "/media/lauren/T7/trim72_XDS_test"              
 
 def find_name_template_in_raw_data(raw_data_base_dir, prefix_hint=None):
     print(f" Searching in: {raw_data_base_dir}")
@@ -20,6 +20,8 @@ def find_name_template_in_raw_data(raw_data_base_dir, prefix_hint=None):
                 wildcard_file = re.sub(r"\d+\.cbf\.gz$", "?????.cbf.gz", file)
                 return os.path.join(root, wildcard_file)
     raise FileNotFoundError(f"No matching .cbf.gz file found under {raw_data_base_dir} with prefix '{prefix_hint}'")
+
+# (unchanged code above)...
 
 def transform_xds_inp_auto_template(
     input_path, output_path, raw_data_base_dir,
@@ -41,49 +43,64 @@ def transform_xds_inp_auto_template(
         lines = f.readlines()
 
     new_lines = []
-    for line in lines:
-        stripped = line.strip()
+    has_space_group = False
+    has_unit_cell = False
 
-        if stripped.startswith("NAME_TEMPLATE_OF_DATA_FRAMES="):
+    for line in lines:
+        stripped_line = line.lstrip()
+
+        if stripped_line.startswith("NAME_TEMPLATE_OF_DATA_FRAMES="):
             print("Replacing NAME_TEMPLATE_OF_DATA_FRAMES")
             new_lines.append(f"NAME_TEMPLATE_OF_DATA_FRAMES= {name_template_path}\n")
             continue
 
-        if stripped.startswith("DETECTOR= PILATUS"):
+        if stripped_line.startswith("DETECTOR=") and "PILATUS" in stripped_line:
             print("Replacing DETECTOR with EIGER")
             new_lines.append("DETECTOR= EIGER\n")
             new_lines.append("MINIMUM_VALID_PIXEL_VALUE=0 OVERLOAD= 239990\n")
             continue
 
-        if stripped.startswith("FRIEDEL'S_LAW="):
+        if stripped_line.startswith("FRIEDEL'S_LAW="):
+            print("Forcing FRIEDEL'S_LAW=TRUE")
             new_lines.append("FRIEDEL'S_LAW=TRUE\n")
             continue
 
-        if re.match(r"^STRONG_PIXEL\s*=", stripped):
+        if stripped_line.startswith("MAXIMUM_NUMBER_OF_JOBS="):
+            print("Commenting out MAXIMUM_NUMBER_OF_JOBS")
             new_lines.append(f"!{line}" if not line.lstrip().startswith("!") else line)
             continue
 
-        if stripped.startswith("SPOT_RANGE="):
-            new_lines.append(f"SPOT_RANGE={spot_range}\n" if spot_range else line)
+        if stripped_line.startswith("SPOT_RANGE="):
+            print("Replacing SPOT_RANGE")
+            new_lines.append(f"SPOT_RANGE= {spot_range}\n" if spot_range else line)
             continue
 
-        if stripped.startswith("DATA_RANGE="):
-            new_lines.append(f"DATA_RANGE={data_range}\n" if data_range else line)
+        if stripped_line.startswith("DATA_RANGE="):
+            print("Replacing DATA_RANGE")
+            new_lines.append(f"DATA_RANGE= {data_range}\n" if data_range else line)
             continue
 
-        if stripped.startswith("SPACE_GROUP_NUMBER=") and space_group_number is not None:
-            new_lines.append(f"SPACE_GROUP_NUMBER={space_group_number}\n")
-            continue
+        if stripped_line.startswith("SPACE_GROUP_NUMBER="):
+            has_space_group = True
 
-        if stripped.startswith("UNIT_CELL_CONSTANTS=") and unit_cell_constants is not None:
-            new_lines.append(f"UNIT_CELL_CONSTANTS= {unit_cell_constants}\n")
-            continue
+        if stripped_line.startswith("UNIT_CELL_CONSTANTS="):
+            has_unit_cell = True
 
         new_lines.append(line)
+
+    # Append new parameters only if provided and not already present
+    if space_group_number is not None and not has_space_group:
+        print("Appending SPACE_GROUP_NUMBER")
+        new_lines.append(f"\nSPACE_GROUP_NUMBER= {space_group_number}\n")
+
+    if unit_cell_constants is not None and not has_unit_cell:
+        print("Appending UNIT_CELL_CONSTANTS")
+        new_lines.append(f"UNIT_CELL_CONSTANTS= {unit_cell_constants}\n")
 
     with open(output_path, 'w') as f:
         f.writelines(new_lines)
     print(f" Written modified file: {output_path}")
+
 
 def batch_process_xds_inps(
     root_dir,
