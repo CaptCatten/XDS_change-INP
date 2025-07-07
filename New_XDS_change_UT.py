@@ -12,7 +12,7 @@ SPOT_RANGE = None                               # e.g. "1 100"
 ROOT_DIR = "/path/to/xds/projects"              # Folder containing multiple XDS.INP files
 
 def find_name_template_in_raw_data(raw_data_base_dir, prefix_hint=None):
-    print(f"🔍 Searching in: {raw_data_base_dir}")
+    print(f" Searching in: {raw_data_base_dir}")
     for root, _, files in os.walk(raw_data_base_dir):
         for file in files:
             if file.endswith(".cbf.gz") and (prefix_hint is None or file.startswith(prefix_hint)):
@@ -29,7 +29,7 @@ def transform_xds_inp_auto_template(
     data_range=None,
     spot_range=None
 ):
-    print(f"\n🛠 Processing file: {input_path}")
+    print(f"\n Processing file: {input_path}")
     
     try:
         name_template_path = find_name_template_in_raw_data(raw_data_base_dir, prefix_hint)
