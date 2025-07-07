@@ -1,19 +1,19 @@
 import os
 import re
-
-def find_name_template(base_dir, prefix_hint=None):
-    print(f"Searching for .cbf.gz file in: {base_dir}")
-    for root, _, files in os.walk(base_dir):
+#Finding the .cbf.gz file prefix module
+def find_name_template(root_dir, prefix_hint=None):
+    print(f"Searching for .cbf.gz file in: {root_dir}")
+    for root, _, files in os.walk(root_dir):
         for file in files:
             if file.endswith(".cbf.gz"):
                 if prefix_hint is None or file.startswith(prefix_hint):
                     print(f"Found .cbf.gz file: {file} in {root}")
-                    wildcard_file = re.sub(r"\d{5}\.cbf\.gz$", "?????.cbf.gz", file)
-                    name_template = os.path.join(root, wildcard_file)
-                    print(f"Generated NAME_TEMPLATE: {name_template}")
+                    wildcard = re.sub(r"\d{5}\.cbf\.gz$", "?????.cbf.gz", file)
+                    name_template = os.path.join(root, wildcard)
+                    print(f"NAME_TEMPLATE: {name_template}")
                     return name_template
-    raise FileNotFoundError(f"No matching .cbf.gz file found under {base_dir}.")
-
+    raise FileNotFoundError(f"No matching .cbf.gz file found under {root_dir}.")
+#Changing the parametres module
 def transform_xds_inp_auto_template(
     input_path, output_path, base_data_dir, 
     prefix_hint=None,
@@ -61,16 +61,16 @@ def transform_xds_inp_auto_template(
             print(f"Commenting out STRONG_PIXEL line")
             new_lines.append(f"!{line}" if not line.lstrip().startswith("!") else line)
             continue
-
+        
         # SPOT_RANGE
-        if stripped.startswith("SPOT_RANGE="):
-            print(f"change SPOT_RANGE to {spot_range}")
+        if stripped.startswith("SPOT_RANGE=") and spot_range is not None:
+            print(f"Changing SPOT_RANGE to {spot_range}")
             new_lines.append(f"SPOT_RANGE={spot_range}\n")
             continue
-            
+    
         # DATA_RANGE
-        if stripped.startswith("DATA_RANGE="):
-            print(f"change DATA_RANGE to {data_range}")
+        if stripped.startswith("DATA_RANGE=") and data_range is not None:
+            print(f"Changing DATA_RANGE to {data_range}")
             new_lines.append(f"DATA_RANGE={data_range}\n")
             continue
 
@@ -112,10 +112,10 @@ def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, 
 # ==== USER CONFIG ====
 root_directory = "/home/napasornnilparuk/Desktop/Re_scale_set4"
 
-# Optional parameters — set to None if not needed
+# Optional parameters — set to "None" if not needed ("None" is case sensitive) 
 prefix_hint = "TRIM72-TRIM72_04_3_" # Add the prefix of file
 space_group_number = "0"  # change to the desired space group
-unit_cell_constants = "70 80 90 90 90 90"  # change to the correct constants based on the space group
+unit_cell_constants = "70 80 90 90 90 90"  # change to the correct constants basedd on the space group
 spot_range = "1 3600" #change to the desire spot range
 data_range = "1 3600" #change to the desire data range
 
