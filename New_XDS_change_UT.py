@@ -93,7 +93,8 @@ def transform_xds_inp_auto_template(
     print(f"Written modified file: {output_path}")
 
 def batch_process_xds_inps(base_dir, prefix_hint=None, space_group_number=None, unit_cell_constants=None, data_range=None, spot_range=None):
-    print(f"\n Starting batch processing in: {base_dir}\n") for subdir, _, files in os.walk(base_dir):
+    print(f"\n Starting batch processing in: {base_dir}\n") 
+    for subdir, _, files in os.walk(base_dir):
         if "XDS.INP" in files:
             inp_path = os.path.join(subdir, "XDS.INP")
             out_path = os.path.join(subdir, "XDS_modified.INP")
