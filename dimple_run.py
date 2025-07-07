@@ -1,14 +1,17 @@
 import os
 from shutil import copyfile
 import subprocess, sys
+import glob
 
-# Define max value for loop
-max_value = 16
+# Define folder prefix
+prefix = "POS"
 
-# Loop through folders
-for i in range(1, max_value + 1):
-    print("00000000000000000000000000 PROCESSING (i) 0000000000000000000000000000000")
-    folder = f"POS{i}"
+# Find all folders matching the prefix
+pos_folders = sorted(glob.glob(f"{prefix}*"))
+
+# Loop through found folders
+for folder in pos_folders:
+    print(f"00000000000000000000000000 PROCESSING {folder} 0000000000000000000000000000000")
     
     # Change directory to the current folder
     try:
@@ -26,11 +29,11 @@ for i in range(1, max_value + 1):
                 print(f"Subfolder {subfolder} not found, moving to the next subfolder.")
                 continue
                 print("processing in subfolder")
-            MTZIN="Merged.mtz"
-            PDBIN="/Data/1TB_SSD/X-ray/p97/SHP_follow_up/PROCESSED_DATA/p97ND1_new.pdb"
-            dimple=["dimple", PDBIN, MTZIN, "-M0", "-s", "DIMPLE_OUT"]
+            MTZIN = "Merged.mtz"
+            PDBIN = "/Data/1TB_SSD/X-ray/p97/SHP_follow_up/PROCESSED_DATA/p97ND1_new.pdb"
+            dimple = ["dimple", PDBIN, MTZIN, "-M0", "-s", "DIMPLE_OUT"]
             logfile = open('dimple.log', 'w')
-            proc=subprocess.Popen(dimple, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            proc = subprocess.Popen(dimple, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             for line in proc.stdout:
                 sys.stdout.write(str(line))
                 logfile.write(str(line))
@@ -45,6 +48,5 @@ for i in range(1, max_value + 1):
 
 # Reporter message
 print("================================================")   
-print(f"Finished processing files in folder {folder}")
+print(f"Finished processing all {prefix} folders")
 print("================================================")
-
