@@ -1,8 +1,18 @@
 import os
 import re
 
+# --- User Configuration ---
+# If you do not want change, keep the variable as "None"
+RAW_DATA_BASE_DIR = "/path/to/raw/data"         # e.g. "/mnt/data/xtal_images"
+PREFIX_HINT = None                              # e.g. "dataset1_"
+SPACE_GROUP_NUMBER = None                       # e.g. 19
+UNIT_CELL_CONSTANTS = None                      # e.g. "70.1 80.2 90.3 90 90 90"
+DATA_RANGE = None                               # e.g. "1 900"
+SPOT_RANGE = None                               # e.g. "1 100"
+ROOT_DIR = "/path/to/xds/projects"              # Folder containing multiple XDS.INP files
+
 def find_name_template_in_raw_data(raw_data_base_dir, prefix_hint=None):
-    print(f" Searching in: {raw_data_base_dir}")
+    print(f"🔍 Searching in: {raw_data_base_dir}")
     for root, _, files in os.walk(raw_data_base_dir):
         for file in files:
             if file.endswith(".cbf.gz") and (prefix_hint is None or file.startswith(prefix_hint)):
@@ -99,3 +109,14 @@ def batch_process_xds_inps(
                 spot_range=spot_range
             )
     print("\n Batch processing complete.")
+
+if __name__ == "__main__":
+    batch_process_xds_inps(
+        root_dir=ROOT_DIR,
+        raw_data_base_dir=RAW_DATA_BASE_DIR,
+        prefix_hint=PREFIX_HINT,
+        space_group_number=SPACE_GROUP_NUMBER,
+        unit_cell_constants=UNIT_CELL_CONSTANTS,
+        data_range=DATA_RANGE,
+        spot_range=SPOT_RANGE
+    )
