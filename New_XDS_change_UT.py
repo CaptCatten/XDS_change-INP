@@ -113,14 +113,15 @@ def batch_process_xds_inps(root_dir, prefix_hint=None, space_group_number=None, 
 root_directory = "/home/napasornnilparuk/Desktop/Re_scale_set4"
 
 # Optional parameters — set to None if not needed
-space_group_number = "0"  # change to the desire space group
+prefix_hint = "TRIM72-TRIM72_04_3_" # Add the prefix of file
+space_group_number = "0"  # change to the desired space group
 unit_cell_constants = "70 80 90 90 90 90"  # change to the correct constants based on the space group
 spot_range = "1 3600" #change to the desire spot range
 data_range = "1 3600" #change to the desire data range
 
 batch_process_xds_inps(
     root_directory,
-    prefix_hint=None,  # or a prefix like "TRIM72"
+    prefix_hint=prefix_hint,  
     space_group_number=space_group_number,
     unit_cell_constants=unit_cell_constants,
     data_range=data_range,
