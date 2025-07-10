@@ -72,7 +72,8 @@ def transform_xds_inp_auto_template(
 
         if stripped_line.startswith("SPOT_RANGE="):
             print("Replacing SPOT_RANGE")
-            new_lines.append(f"SPOT_RANGE= {spot_range}\n" if spot_range else line)
+            new_lines.append(
+f"SPOT_RANGE= {spot_range}\n" if spot_range else line)
             continue
 
         if stripped_line.startswith("DATA_RANGE="):
