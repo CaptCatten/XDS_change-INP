@@ -1,18 +1,18 @@
 import os
 import re
+import shutil
 import subprocess
 
 # --- User Configuration ---
-# If you do not want to change a setting, keep the variable as "None"
-RAW_DATA_BASE_DIR = "/media/lauren/T7/trim72"
+RAW_DATA_BASE_DIR = "/media/lauren/T7/trim72"  # required for the script to loop through the raw data directory
 PREFIX_HINT = None
-SPACE_GROUP_NUMBER = "REEEEEE"
-UNIT_CELL_CONSTANTS = "REEEEE"
-DATA_RANGE = "REEEEEE"
-SPOT_RANGE = "REEEEEEE"
-ROOT_DIR = "/media/lauren/T7/trim72_XDS_test"
+SPACE_GROUP_NUMBER = None
+UNIT_CELL_CONSTANTS = None
+DATA_RANGE = None
+SPOT_RANGE = None
+ROOT_DIR = "/media/lauren/T7/trim72_XDS_test"  # required for the script to loop through the root dir to find XDS.INP
 
-
+# find the path of the raw data then store it
 def find_name_template_in_raw_data(raw_data_base_dir, prefix_hint=None):
     print(f" Searching in: {raw_data_base_dir}")
     for root, _, files in os.walk(raw_data_base_dir):
@@ -23,9 +23,9 @@ def find_name_template_in_raw_data(raw_data_base_dir, prefix_hint=None):
                 return os.path.join(root, wildcard_file)
     raise FileNotFoundError(f"No matching .cbf.gz file found under {raw_data_base_dir} with prefix '{prefix_hint}'")
 
-
+# modified the XDS.INP file based on the parameter
 def transform_xds_inp_auto_template(
-    input_path, output_path, raw_data_base_dir,
+    input_path, raw_data_base_dir,
     prefix_hint=None,
     space_group_number=None,
     unit_cell_constants=None,
@@ -89,7 +89,6 @@ def transform_xds_inp_auto_template(
 
         new_lines.append(line)
 
-    # Append at the end if not already present
     if space_group_number is not None and not has_space_group:
         print("Appending SPACE_GROUP_NUMBER")
         new_lines.append(f"\nSPACE_GROUP_NUMBER= {space_group_number}\n")
@@ -98,11 +97,17 @@ def transform_xds_inp_auto_template(
         print("Appending UNIT_CELL_CONSTANTS")
         new_lines.append(f"UNIT_CELL_CONSTANTS= {unit_cell_constants}\n")
 
-    with open(output_path, 'w') as f:
+    # Backup original
+    backup_path = input_path.replace("XDS.INP", "XDS_org.INP")
+    shutil.copy2(input_path, backup_path)
+    print(f" Backed up original to: {backup_path}")
+
+    # Overwrite original
+    with open(input_path, 'w') as f:
         f.writelines(new_lines)
-    print(f" Written modified file: {output_path}")
+    print(f" Overwritten: {input_path}")
 
-
+# main loop that processed the file in the directory
 def batch_process_xds_inps(
     root_dir,
     raw_data_base_dir,
@@ -110,17 +115,18 @@ def batch_process_xds_inps(
     space_group_number=None,
     unit_cell_constants=None,
     data_range=None,
-    spot_range=None,
-    run_xds=False  # Option to run xds_par
+    spot_range=None
 ):
     print(f"\n Starting batch processing in: {root_dir}\n")
     for subdir, _, files in os.walk(root_dir):
         if "XDS.INP" in files:
             inp_path = os.path.join(subdir, "XDS.INP")
-            out_path = os.path.join(subdir, "XDS_modified.INP")
             print(f" Found XDS.INP in: {subdir}")
+            
+            # Modify the file
             transform_xds_inp_auto_template(
-                inp_path, out_path, raw_data_base_dir,
+                inp_path,
+                raw_data_base_dir,
                 prefix_hint=prefix_hint,
                 space_group_number=space_group_number,
                 unit_cell_constants=unit_cell_constants,
@@ -128,13 +134,16 @@ def batch_process_xds_inps(
                 spot_range=spot_range
             )
 
-            if run_xds:
-                try:
-                    print(f" Running xds_par in {subdir}")
-                    subprocess.run(["cp", "XDS_modified.INP", "XDS.INP"], cwd=subdir, check=True)
-                    subprocess.run(["xds_par"], cwd=subdir, check=True)
-                except subprocess.CalledProcessError as e:
-                    print(f" Error running xds_par in {subdir}: {e}")
+            # Run xds_par
+            try:
+                print(f" Running xds_par in: {subdir}")
+                subprocess.run(["xds_par"], cwd=subdir, check=True)
+                print(f" xds_par completed in: {subdir}")
+            except subprocess.CalledProcessError as e:
+                print(f" ERROR running xds_par in {subdir}: {e}")
+            except FileNotFoundError:
+                print(" ERROR: xds_par not found. Is it installed and in your PATH?")
+
     print("\n Batch processing complete.")
 
 
@@ -146,6 +155,5 @@ if __name__ == "__main__":
         space_group_number=SPACE_GROUP_NUMBER,
         unit_cell_constants=UNIT_CELL_CONSTANTS,
         data_range=DATA_RANGE,
-        spot_range=SPOT_RANGE,
-        run_xds=True  # Set to False if you do not want to run xds_par
+        spot_range=SPOT_RANGE
     )
