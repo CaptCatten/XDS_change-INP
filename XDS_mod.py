@@ -2,38 +2,45 @@ import os
 import re
 import shutil
 
-# --- User Configuration ---
-RAW_DATA_BASE_DIR = "/media/lauren/T7/trim72" #raw data root directory
+RAW_DATA_BASE_DIR = "/media/lauren/T7/trim72"
+ROOT_DIR = "/media/lauren/T7/trim72_XDS_test"
 PREFIX_HINT = None
 SPACE_GROUP_NUMBER = None
 UNIT_CELL_CONSTANTS = None
 DATA_RANGE = None
 SPOT_RANGE = None
-ROOT_DIR = "/media/lauren/T7/trim72_XDS_test"
 
-# --- Function to find the correct raw data path using the template prefix ---
-def find_name_template_in_raw_data_by_prefix(raw_data_base_dir, name_template):
-    # Extract the prefix from the name template (e.g., remove "?????.cbf.gz")
-    prefix_match = re.match(r"(.+?)(?:\?+\.cbf\.gz)$", name_template.strip())
-    if not prefix_match:
-        raise ValueError(f"Invalid NAME_TEMPLATE_OF_DATA_FRAMES format: {name_template}")
-    
-    prefix = prefix_match.group(1)
-    print(f" Searching for raw data prefix: {prefix} under {raw_data_base_dir}")
 
-    # Walk through raw data directory to find a matching .cbf.gz file
-    for root, _, files in os.walk(raw_data_base_dir):
+def find_name_template_in_raw_data(raw_data_base_dir, dataset_id, prefix_hint=None):
+    """
+    Search only in /raw_data_base_dir/<dataset_id>/** for *.cbf.gz
+    and convert the last frame number to ?????.
+    """
+    search_root = os.path.join(raw_data_base_dir, dataset_id)
+    print(f" Searching in raw data folder: {search_root}")
+
+    if not os.path.isdir(search_root):
+        raise FileNotFoundError(
+            f"Raw data folder for dataset '{dataset_id}' not found under {raw_data_base_dir}"
+        )
+
+    for root, _, files in os.walk(search_root):
         for file in files:
-            if file.startswith(prefix) and file.endswith(".cbf.gz"):
-                print(f"  Matched: {file} in {root}")
-                wildcarded = re.sub(r"\d+\.cbf\.gz$", "?????.cbf.gz", file)
-                return os.path.join(root, wildcarded)
+            if file.endswith(".cbf.gz") and (prefix_hint is None or file.startswith(prefix_hint)):
+                print(f" Found file: {file} in {root}")
+                # e.g. TRIM72-TRIM72_09_1_00001.cbf.gz -> TRIM72-TRIM72_09_1_?????.cbf.gz
+                wildcard_file = re.sub(r"_(\d+)\.cbf\.gz$", r"_?????.cbf.gz", file)
+                return os.path.join(root, wildcard_file)
 
-    raise FileNotFoundError(f"No raw data file matching prefix '{prefix}' found under {raw_data_base_dir}")
+    raise FileNotFoundError(
+        f"No matching .cbf.gz file found in {search_root} with prefix '{prefix_hint}'"
+    )
 
-# --- Function to transform a single XDS.INP file ---
+
 def transform_xds_inp_auto_template(
-    input_path, raw_data_base_dir,
+    input_path,
+    raw_data_base_dir,
+    dataset_id,
     prefix_hint=None,
     space_group_number=None,
     unit_cell_constants=None,
@@ -41,6 +48,15 @@ def transform_xds_inp_auto_template(
     spot_range=None
 ):
     print(f"\n Processing file: {input_path}")
+    print(f" Dataset id inferred: {dataset_id}")
+
+    try:
+        name_template_path = find_name_template_in_raw_data(
+            raw_data_base_dir, dataset_id, prefix_hint
+        )
+    except FileNotFoundError as e:
+        print(f"{e}")
+        return
 
     with open(input_path, 'r') as f:
         lines = f.readlines()
@@ -52,15 +68,8 @@ def transform_xds_inp_auto_template(
     for line in lines:
         stripped_line = line.lstrip()
 
-        # Match the NAME_TEMPLATE line, extract and resolve to full path
         if stripped_line.startswith("NAME_TEMPLATE_OF_DATA_FRAMES="):
             print("Replacing NAME_TEMPLATE_OF_DATA_FRAMES")
-            name_template = stripped_line.split("=", 1)[1].strip()
-            try:
-                name_template_path = find_name_template_in_raw_data_by_prefix(raw_data_base_dir, name_template)
-            except FileNotFoundError as e:
-                print(f"{e}")
-                return
             new_lines.append(f"NAME_TEMPLATE_OF_DATA_FRAMES= {name_template_path}\n")
             continue
 
@@ -77,7 +86,7 @@ def transform_xds_inp_auto_template(
 
         if stripped_line.startswith("MAXIMUM_NUMBER_OF_JOBS="):
             print("Commenting out MAXIMUM_NUMBER_OF_JOBS")
-            new_lines.append(f"!{line}" if not line.lstrip().startswith("!") else line)
+            new_lines.append(f"!{line}" if not stripped_line.startswith("!") else line)
             continue
 
         if stripped_line.startswith("SPOT_RANGE="):
@@ -106,17 +115,15 @@ def transform_xds_inp_auto_template(
         print("Appending UNIT_CELL_CONSTANTS")
         new_lines.append(f"UNIT_CELL_CONSTANTS= {unit_cell_constants}\n")
 
-    # Backup original
     backup_path = input_path.replace("XDS.INP", "XDS_org.INP")
     shutil.copy2(input_path, backup_path)
     print(f" Backed up original to: {backup_path}")
 
-    # Overwrite original
     with open(input_path, 'w') as f:
         f.writelines(new_lines)
     print(f" Overwritten: {input_path}")
 
-# --- Main loop to batch process ---
+
 def batch_process_xds_inps(
     root_dir,
     raw_data_base_dir,
@@ -127,22 +134,31 @@ def batch_process_xds_inps(
     spot_range=None
 ):
     print(f"\n Starting batch processing in: {root_dir}\n")
+
     for subdir, _, files in os.walk(root_dir):
         if "XDS.INP" in files:
             inp_path = os.path.join(subdir, "XDS.INP")
-            print(f" Found XDS.INP in: {subdir}")
+
+            # dataset_id = first folder under ROOT_DIR (just the number, e.g. '9')
+            rel_path = os.path.relpath(subdir, root_dir)
+            dataset_id = rel_path.split(os.sep)[0]
+
+            print(f" Found XDS.INP in: {subdir} (dataset_id = {dataset_id})")
+
             transform_xds_inp_auto_template(
                 inp_path,
-                raw_data_base_dir=raw_data_base_dir,
+                raw_data_base_dir,
+                dataset_id=dataset_id,
                 prefix_hint=prefix_hint,
                 space_group_number=space_group_number,
                 unit_cell_constants=unit_cell_constants,
                 data_range=data_range,
                 spot_range=spot_range
             )
+
     print("\n Batch processing complete.")
 
-# --- Entry point ---
+
 if __name__ == "__main__":
     batch_process_xds_inps(
         root_dir=ROOT_DIR,
@@ -153,4 +169,5 @@ if __name__ == "__main__":
         data_range=DATA_RANGE,
         spot_range=SPOT_RANGE
     )
+
 
