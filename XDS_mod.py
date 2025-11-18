@@ -2,12 +2,13 @@ import os
 import re
 import shutil
 
-RAW_DATA_BASE_DIR = "/media/lauren/T7/trim72"
-ROOT_DIR = "/media/lauren/T7/trim72_XDS_test"
-PREFIX_HINT = None
-SPACE_GROUP_NUMBER = None
+#variable list if you do not want to change, leave as None. Keep in mind everything is case sensitive. when dealing with path always use absolute path. 
+RAW_DATA_BASE_DIR = "/media/lauren/T7/trim72" # Path of your raw data root directory, yes potentioally it should work if you do not copy the data over but I have not tested that
+ROOT_DIR = "/media/lauren/T7/trim72_XDS_test" # Path of your processed data set. ALWAYS leave the back up in obelix alone. that way if you encounter a bug, you have a back up
+PREFIX_HINT = None # if your dataset have a common prefix, or you have a unique identifyer that you want only that one processed
+SPACE_GROUP_NUMBER = None # If you change this, change the unit cell constants, or XDS will produce an error 
 UNIT_CELL_CONSTANTS = None
-DATA_RANGE = None
+DATA_RANGE = None 
 SPOT_RANGE = None
 
 
@@ -82,6 +83,10 @@ def transform_xds_inp_auto_template(
         if stripped_line.startswith("FRIEDEL'S_LAW="):
             print("Forcing FRIEDEL'S_LAW=TRUE")
             new_lines.append("FRIEDEL'S_LAW=TRUE\n")
+            continue
+
+        if stripped_line.startswith("GENERIC_LIB=") or stripped_line.startswith("LIB="):
+            print("Removing GENERIC_LIB / LIB line")
             continue
 
         if stripped_line.startswith("MAXIMUM_NUMBER_OF_JOBS="):
