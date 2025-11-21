@@ -223,8 +223,12 @@ def run_pointless_aimless(folder):
         source {CCP4_SETUP} && \
         pointless XDS_ASCII.HKL > pointless1.log 2>&1 && \
         pointless -copy XDS_ASCII.HKL hklout XDS_ASCII.mtz > pointless2.log 2>&1 && \
-        aimless HKLIN XDS_ASCII.mtz HKLOUT Merged.mtz XMLOUT XDS.xml ONLYMERGE --no-input > aimless.log 2>&1
-    """
+        aimless HKLIN XDS_ASCII.mtz HKLOUT Merged.mtz XMLOUT XDS.xml \
+            FREERFRAC 0.05 \
+            TWIN \
+            ONLYMERGE --no-input > aimless.log 2>&1
+        """
+
 
     result = subprocess.run(
         ["bash", "-lc", bash_cmd],
