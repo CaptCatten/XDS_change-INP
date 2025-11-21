@@ -31,10 +31,6 @@ SPOT_RANGE = None
 # Path to CCP4 setup script for pointless/aimless
 CCP4_SETUP = "/opt/xtal/ccp4-9/bin/ccp4.setup-sh"
 
-# Whether to run XDS and/or Aimless in FULL mode
-RUN_XDS = True
-RUN_AIMLESS = True
-
 # ================== PIPELINE MODE ==================
 # Options:
 #   MODE = "full"         → rewrite XDS.INP → run XDS → run Aimless
