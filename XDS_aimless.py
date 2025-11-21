@@ -10,7 +10,7 @@ import subprocess
 # ============================================================
 
 # Path of your raw data root directory, grouped by dataset id
-RAW_DATA_BASE_DIR = "/home/napasornnilparuk/Desktop/TRIM72/Beamline_data/20251025/raw_data/CC138A/"
+RAW_DATA_BASE_DIR = "/path/to/raw_data/CC138A/"
 
 # Path of your processed data set (contains XDS.INP, XDS_ASCII.HKL, etc.)
 ROOT_DIR = "/media/lauren/T7/Processed_data/processed_data/CC138A"
@@ -29,7 +29,6 @@ DATA_RANGE = None
 SPOT_RANGE = None
 
 # Path to CCP4 setup script for pointless/aimless/ctruncate/freerflag
-# for woek station use "/usr/local/ccp4/ccp4-8.0/bin/ccp4.setup.sh"
 CCP4_SETUP = "/opt/xtal/ccp4-9/bin/ccp4.setup-sh"
 
 # ================== PIPELINE MODE ==================
@@ -179,6 +178,39 @@ def transform_xds_inp_auto_template(
     return True
 
 
+def parse_aimless_summary(log_path):
+    """
+    Extract space group and high-resolution limit from aimless.log.
+    Returns (space_group_str, high_res_str) or ('UNKNOWN', 'UNKNOWN').
+    """
+    space_group = "UNKNOWN"
+    high_res = "UNKNOWN"
+
+    try:
+        with open(log_path, "r") as f:
+            text = f.read()
+    except FileNotFoundError:
+        return space_group, high_res
+
+    # Space group: use last occurrence of 'Space group'
+    sg_matches = list(re.finditer(r"Space\s+group\s*[:=]\s*(.+)", text))
+    if sg_matches:
+        sg_line = sg_matches[-1].group(1).strip()
+        sg_line = re.sub(r"\(.*?\)", "", sg_line).strip()
+        space_group = sg_line
+
+    # High resolution limit
+    res_matches = list(re.finditer(r"High\s+resolution\s+limit\s+([0-9.]+)", text))
+    if not res_matches:
+        res_matches = list(
+            re.finditer(r"Resolution\s+range\s+[0-9.]+\s+to\s+([0-9.]+)", text)
+        )
+    if res_matches:
+        high_res = res_matches[-1].group(1)
+
+    return space_group, high_res
+
+
 def run_xds(folder):
     """Run xds_par in the given folder and capture log (used in FULL mode)."""
     print(f"  Running xds_par in: {folder}")
@@ -208,14 +240,18 @@ def run_ccp4_pipeline(folder):
     """
     Run POINTLESS → AIMLESS → CTRUNCATE → FREERFLAG in 'folder'
     starting from XDS_ASCII.HKL.
+    On success, returns (space_group, high_res Å).
+    On failure, returns None.
     """
     hkl_path = os.path.join(folder, "XDS_ASCII.HKL")
     if not os.path.isfile(hkl_path):
         print("  WARNING: XDS_ASCII.HKL not found, skipping CCP4 pipeline.")
-        return False
+        return None
 
     print(f"  Running CCP4 pipeline in: {folder}")
 
+    # NOTE: The interior of this string is shell code, not Python.
+    # EOF must be at the start of the line (no indentation).
     bash_cmd = f"""source {CCP4_SETUP} && \
 pointless XDS_ASCII.HKL > pointless1.log 2>&1 && \
 pointless -copy XDS_ASCII.HKL hklout XDS_ASCII.mtz > pointless2.log 2>&1 && \
@@ -244,10 +280,12 @@ EOF
         print(result.stdout)
         print("  ---- stderr ----")
         print(result.stderr)
-        return False
+        return None
 
     print("  CCP4 pipeline finished successfully")
-    return True
+
+    sg, res = parse_aimless_summary(os.path.join(folder, "aimless.log"))
+    return sg, res
 
 
 def full_pipeline(
@@ -264,12 +302,14 @@ def full_pipeline(
       - rewrite XDS.INP
       - run XDS
       - run POINTLESS → AIMLESS → CTRUNCATE → FREERFLAG
+      - print per-dataset summary (space group + high-res limit)
     """
     print(f"\n=== FULL MODE: Starting batch processing in: {root_dir} ===\n")
 
     processed = 0
     xds_ok = 0
     ccp4_ok = 0
+    summaries = []  # (dataset_id, space_group, high_res)
 
     for subdir, _, files in os.walk(root_dir):
         if "XDS.INP" not in files:
@@ -277,7 +317,7 @@ def full_pipeline(
 
         inp_path = os.path.join(subdir, "XDS.INP")
 
-        # dataset_id = first folder under ROOT_DIR (e.g. "9" or "POS9")
+        # dataset_id = first folder under ROOT_DIR (e.g. "POS9" or "9")
         rel_path = os.path.relpath(subdir, root_dir)
         dataset_id = rel_path.split(os.sep)[0]
 
@@ -302,13 +342,21 @@ def full_pipeline(
 
         if run_xds(subdir):
             xds_ok += 1
-            if run_ccp4_pipeline(subdir):
+            result = run_ccp4_pipeline(subdir)
+            if result is not None:
                 ccp4_ok += 1
+                sg, res = result
+                summaries.append((dataset_id, sg, res))
 
     print("\n=== FULL MODE: Batch processing complete ===")
     print(f" Total XDS.INP files processed:  {processed}")
     print(f" XDS successful:                 {xds_ok}")
     print(f" CCP4 pipeline successful:       {ccp4_ok}")
+
+    if summaries:
+        print("\n=== SUMMARY (dataset  space_group, high_res_Å) ===")
+        for dataset_id, sg, res in summaries:
+            print(f" {dataset_id:10s}  {sg}, {res} Å")
 
 
 def aimless_only(root_dir):
@@ -324,6 +372,7 @@ def aimless_only(root_dir):
     total = 0
     ccp4_ok = 0
     ccp4_fail = 0
+    summaries = []  # (dataset_id, space_group, high_res)
 
     for subdir, _, files in os.walk(root_dir):
         if "XDS_ASCII.HKL" not in files:
@@ -332,8 +381,14 @@ def aimless_only(root_dir):
         total += 1
         print(f"\n--- CCP4-only dataset: {subdir} ---")
 
-        if run_ccp4_pipeline(subdir):
+        rel_path = os.path.relpath(subdir, root_dir)
+        dataset_id = rel_path.split(os.sep)[0]
+
+        result = run_ccp4_pipeline(subdir)
+        if result is not None:
             ccp4_ok += 1
+            sg, res = result
+            summaries.append((dataset_id, sg, res))
         else:
             ccp4_fail += 1
 
@@ -341,6 +396,11 @@ def aimless_only(root_dir):
     print(f" Datasets with XDS_ASCII.HKL: {total}")
     print(f" CCP4 pipeline successful:    {ccp4_ok}")
     print(f" CCP4 pipeline failed:        {ccp4_fail}")
+
+    if summaries:
+        print("\n=== SUMMARY (dataset  space_group, high_res_Å) ===")
+        for dataset_id, sg, res in summaries:
+            print(f" {dataset_id:10s}  {sg}, {res} Å")
 
 
 if __name__ == "__main__":
