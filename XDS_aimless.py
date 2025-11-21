@@ -221,16 +221,15 @@ pointless XDS_ASCII.HKL > pointless1.log 2>&1 && \
 pointless -copy XDS_ASCII.HKL hklout XDS_ASCII.mtz > pointless2.log 2>&1 && \
 aimless HKLIN XDS_ASCII.mtz HKLOUT Merged.mtz XMLOUT XDS.xml \
   --no-input > aimless.log 2>&1 && \
-ctruncate -mtzin Merged.mtz -mtzout Truncate.mtz > ctruncate.log 2>&1 << EOF
-COLIN F=F SIGF=SIGF
-END
-EOF
-freerflag HKLIN Truncate.mtz HKLOUT Final_with_FreeR.mtz > freerflag.log 2>&1 << EOF
+ctruncate -mtzin Merged.mtz -mtzout Truncate.mtz \
+  -colin '/*/*/[IMEAN,SIGIMEAN]' \
+  > ctruncate.log 2>&1 && \
+freerflag HKLIN Truncate.mtz HKLOUT Final_with_FreeR.mtz \
+  > freerflag.log 2>&1 << EOF
 FREERFRAC 0.05
 END
 EOF
 """
-
 
     result = subprocess.run(
         ["bash", "-lc", bash_cmd],
