@@ -29,6 +29,8 @@ DATA_RANGE = None
 SPOT_RANGE = None
 
 # Path to CCP4 setup script for pointless/aimless/ctruncate/freerflag
+# if you are using the work station copy the path below
+# "/usr/local/ccp4-8.0/bin/ccp4.setup-sh"
 CCP4_SETUP = "/opt/xtal/ccp4-9/bin/ccp4.setup-sh"
 
 # ================== PIPELINE MODE ==================
