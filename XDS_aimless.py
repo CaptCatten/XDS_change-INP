@@ -13,7 +13,7 @@ import subprocess
 RAW_DATA_BASE_DIR = "/home/napasornnilparuk/Desktop/TRIM72/Beamline_data/20251025/raw_data/CC138A/"
 
 # Path of your processed data set (contains XDS.INP, XDS_ASCII.HKL, etc.)
-ROOT_DIR = "/home/napasornnilparuk/Desktop/TRIM72/Beamline_data/20251025/processed_data/CC138A/"
+ROOT_DIR = "/media/lauren/T7/Processed_data/processed_data/CC138A"
 
 # If your dataset has a common prefix, or you have a unique identifier
 # you want to restrict to, set it here (e.g. "TRIM72_"). Otherwise leave as None.
@@ -28,15 +28,16 @@ UNIT_CELL_CONSTANTS = None         # e.g. "50.0 60.0 70.0 90.0 90.0 120.0"
 DATA_RANGE = None
 SPOT_RANGE = None
 
-# Path to CCP4 setup script for pointless/aimless
+# Path to CCP4 setup script for pointless/aimless/ctruncate/freerflag
+# for woek station use "/usr/local/ccp4/ccp4-8.0/bin/ccp4.setup.sh"
 CCP4_SETUP = "/opt/xtal/ccp4-9/bin/ccp4.setup-sh"
 
 # ================== PIPELINE MODE ==================
 # Options:
-#   MODE = "full"         → rewrite XDS.INP → run XDS → run Aimless
-#   MODE = "aimless-only" → ONLY run pointless + aimless
+#   MODE = "full"         → rewrite XDS.INP → run XDS → CCP4 pipeline
+#   MODE = "aimless-only" → ONLY run CCP4 pipeline
 #                            (ignores raw data, ignores XDS.INP, skips XDS)
-MODE = "full"
+MODE = "aimless-only"
 # ===================================================
 
 
@@ -74,7 +75,7 @@ def transform_xds_inp_auto_template(
     space_group_number=None,
     unit_cell_constants=None,
     data_range=None,
-    spot_range=None
+    spot_range=None,
 ):
     """
     Modify XDS.INP in-place:
@@ -97,7 +98,7 @@ def transform_xds_inp_auto_template(
         print(f"  WARNING: {e}")
         return False
 
-    with open(input_path, 'r') as f:
+    with open(input_path, "r") as f:
         lines = f.readlines()
 
     new_lines = []
@@ -171,7 +172,7 @@ def transform_xds_inp_auto_template(
     shutil.copy2(input_path, backup_path)
     print(f"  Backed up original to: {backup_path}")
 
-    with open(input_path, 'w') as f:
+    with open(input_path, "w") as f:
         f.writelines(new_lines)
     print(f"  Overwritten: {input_path}")
 
@@ -180,9 +181,6 @@ def transform_xds_inp_auto_template(
 
 def run_xds(folder):
     """Run xds_par in the given folder and capture log (used in FULL mode)."""
-    if not RUN_XDS:
-        return True
-
     print(f"  Running xds_par in: {folder}")
     result = subprocess.run(
         ["bash", "-lc", "xds_par > XDS_run.log 2>&1"],
@@ -206,28 +204,32 @@ def run_xds(folder):
     return True
 
 
-def run_pointless_aimless(folder):
-    """Run pointless + aimless on XDS_ASCII.HKL using CCP4."""
+def run_ccp4_pipeline(folder):
+    """
+    Run POINTLESS → AIMLESS → CTRUNCATE → FREERFLAG in 'folder'
+    starting from XDS_ASCII.HKL.
+    """
     hkl_path = os.path.join(folder, "XDS_ASCII.HKL")
     if not os.path.isfile(hkl_path):
-        print("  WARNING: XDS_ASCII.HKL not found, skipping aimless.")
+        print("  WARNING: XDS_ASCII.HKL not found, skipping CCP4 pipeline.")
         return False
 
-    print(f"  Running pointless + aimless in: {folder}")
+    print(f"  Running CCP4 pipeline in: {folder}")
 
     bash_cmd = f"""source {CCP4_SETUP} && \
-    pointless XDS_ASCII.HKL > pointless1.log 2>&1 && \
-    pointless -copy XDS_ASCII.HKL hklout XDS_ASCII.mtz > pointless2.log 2>&1 && \
-    aimless HKLIN XDS_ASCII.mtz HKLOUT Merged.mtz XMLOUT XDS.xml \
-        --no-input > aimless.log 2>&1 && \
-    ctruncate HKLIN Merged.mtz HKLOUT Truncate.mtz XMLSTATOUT Truncate.xml \
-        > ctruncate.log 2>&1 && \
-    freerflag HKLIN Truncate.mtz HKLOUT Final_with_FreeR.mtz \
-        > freerflag.log 2>&1 << EOF
-    FREERFRAC 0.05
-    END
-    EOF
-    """
+pointless XDS_ASCII.HKL > pointless1.log 2>&1 && \
+pointless -copy XDS_ASCII.HKL hklout XDS_ASCII.mtz > pointless2.log 2>&1 && \
+aimless HKLIN XDS_ASCII.mtz HKLOUT Merged.mtz XMLOUT XDS.xml \
+  --no-input > aimless.log 2>&1 && \
+ctruncate -mtzin Merged.mtz -mtzout Truncate.mtz > ctruncate.log 2>&1 << EOF
+COLIN F=F SIGF=SIGF
+END
+EOF
+freerflag HKLIN Truncate.mtz HKLOUT Final_with_FreeR.mtz > freerflag.log 2>&1 << EOF
+FREERFRAC 0.05
+END
+EOF
+"""
 
 
     result = subprocess.run(
@@ -238,14 +240,14 @@ def run_pointless_aimless(folder):
     )
 
     if result.returncode != 0:
-        print("  ERROR: pointless/aimless failed")
+        print("  ERROR: CCP4 pipeline (pointless/aimless/ctruncate/freerflag) failed")
         print("  ---- stdout ----")
         print(result.stdout)
         print("  ---- stderr ----")
         print(result.stderr)
         return False
 
-    print("  pointless + aimless finished successfully")
+    print("  CCP4 pipeline finished successfully")
     return True
 
 
@@ -256,19 +258,19 @@ def full_pipeline(
     space_group_number=None,
     unit_cell_constants=None,
     data_range=None,
-    spot_range=None
+    spot_range=None,
 ):
     """
     FULL MODE:
       - rewrite XDS.INP
       - run XDS
-      - run pointless + aimless
+      - run POINTLESS → AIMLESS → CTRUNCATE → FREERFLAG
     """
     print(f"\n=== FULL MODE: Starting batch processing in: {root_dir} ===\n")
 
     processed = 0
     xds_ok = 0
-    aimless_ok = 0
+    ccp4_ok = 0
 
     for subdir, _, files in os.walk(root_dir):
         if "XDS.INP" not in files:
@@ -294,52 +296,52 @@ def full_pipeline(
         )
 
         if not ok:
-            print(" Skipping XDS/Aimless because XDS.INP modification failed.")
+            print(" Skipping XDS/CCP4 because XDS.INP modification failed.")
             continue
 
         processed += 1
 
         if run_xds(subdir):
             xds_ok += 1
-            if RUN_AIMLESS and run_pointless_aimless(subdir):
-                aimless_ok += 1
+            if run_ccp4_pipeline(subdir):
+                ccp4_ok += 1
 
     print("\n=== FULL MODE: Batch processing complete ===")
-    print(f" Total XDS.INP files processed: {processed}")
-    if RUN_XDS:
-        print(f" XDS successful:                  {xds_ok}")
-    if RUN_AIMLESS:
-        print(f" Aimless successful:              {aimless_ok}")
+    print(f" Total XDS.INP files processed:  {processed}")
+    print(f" XDS successful:                 {xds_ok}")
+    print(f" CCP4 pipeline successful:       {ccp4_ok}")
 
 
 def aimless_only(root_dir):
     """
-    AIMLESS-ONLY MODE:
+    AIMLESS-ONLY MODE (really: CCP4-only):
       - DOES NOT touch XDS.INP
       - DOES NOT look at RAW_DATA_BASE_DIR
       - DOES NOT run XDS
-      - ONLY: finds XDS_ASCII.HKL and runs pointless + aimless
+      - ONLY: finds XDS_ASCII.HKL and runs POINTLESS → AIMLESS → CTRUNCATE → FREERFLAG
     """
     print(f"\n=== AIMLESS-ONLY MODE: Searching under: {root_dir} ===\n")
 
-    aimless_ok = 0
-    aimless_fail = 0
+    total = 0
+    ccp4_ok = 0
+    ccp4_fail = 0
 
     for subdir, _, files in os.walk(root_dir):
         if "XDS_ASCII.HKL" not in files:
             continue
 
-        print(f"\n--- Aimless-only dataset: {subdir} ---")
+        total += 1
+        print(f"\n--- CCP4-only dataset: {subdir} ---")
 
-        if run_pointless_aimless(subdir):
-            aimless_ok += 1
+        if run_ccp4_pipeline(subdir):
+            ccp4_ok += 1
         else:
-            aimless_fail += 1
+            ccp4_fail += 1
 
     print("\n=== AIMLESS-ONLY MODE: Complete ===")
-    print(f" Datasets with XDS_ASCII.HKL: {aimless_ok + aimless_fail}")
-    print(f" Aimless successful:          {aimless_ok}")
-    print(f" Aimless failed:              {aimless_fail}")
+    print(f" Datasets with XDS_ASCII.HKL: {total}")
+    print(f" CCP4 pipeline successful:    {ccp4_ok}")
+    print(f" CCP4 pipeline failed:        {ccp4_fail}")
 
 
 if __name__ == "__main__":
