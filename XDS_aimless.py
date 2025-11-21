@@ -3,36 +3,45 @@ import re
 import shutil
 import subprocess
 
-# ================== USER CONFIGURATION ==================
-# If you do not want to change a parameter, leave it as None.
-# When dealing with paths, ALWAYS use absolute paths.
+# ============================================================
+# USER CONFIGURATION
+# If you do not want to change a parameter, leave as None.
+# Paths should be absolute.
+# ============================================================
 
-# Path of your raw data root directory (where the *.cbf.gz live, grouped by dataset id)
-RAW_DATA_BASE_DIR = "/path/to/raw_data/CC138A"
+# Path of your raw data root directory, grouped by dataset id
+RAW_DATA_BASE_DIR = "/home/napasornnilparuk/Desktop/TRIM72/Beamline_data/20251025/raw_data/CC138A/"
 
-# Path of your processed data set (where all the XDS.INP / XDS datasets live)
-ROOT_DIR = "/path/to/processed_data/CC138A"
+# Path of your processed data set (contains XDS.INP, XDS_ASCII.HKL, etc.)
+ROOT_DIR = "/home/napasornnilparuk/Desktop/TRIM72/Beamline_data/20251025/processed_data/CC138A/"
 
-# If your datasets have a common prefix, or you have a unique identifier that you
-# want to filter for, set it here (e.g. "TRIM72_"). Otherwise leave as None.
+# If your dataset has a common prefix, or you have a unique identifier
+# you want to restrict to, set it here (e.g. "TRIM72_"). Otherwise leave as None.
 PREFIX_HINT = None
 
-# If you change SPACE_GROUP_NUMBER, also change UNIT_CELL_CONSTANTS,
-# or XDS will complain.
+# If you change this, also change the unit cell constants,
+# or XDS will produce an error.
 SPACE_GROUP_NUMBER = None          # e.g. "96"
 UNIT_CELL_CONSTANTS = None         # e.g. "50.0 60.0 70.0 90.0 90.0 120.0"
 
-# Optional overrides for DATA_RANGE / SPOT_RANGE in XDS.INP, e.g. "1 360"
+# Optional overrides for XDS ranges, e.g. "1 360"
 DATA_RANGE = None
 SPOT_RANGE = None
 
 # Path to CCP4 setup script for pointless/aimless
 CCP4_SETUP = "/opt/xtal/ccp4-9/bin/ccp4.setup-sh"
 
-# Whether to run XDS and/or Aimless after rewriting XDS.INP
+# Whether to run XDS and/or Aimless in FULL mode
 RUN_XDS = True
 RUN_AIMLESS = True
-# ========================================================
+
+# ================== PIPELINE MODE ==================
+# Options:
+#   MODE = "full"         → rewrite XDS.INP → run XDS → run Aimless
+#   MODE = "aimless-only" → ONLY run pointless + aimless
+#                            (ignores raw data, ignores XDS.INP, skips XDS)
+MODE = "full"
+# ===================================================
 
 
 def find_name_template_in_raw_data(raw_data_base_dir, dataset_id, prefix_hint=None):
@@ -71,6 +80,16 @@ def transform_xds_inp_auto_template(
     data_range=None,
     spot_range=None
 ):
+    """
+    Modify XDS.INP in-place:
+      - fix NAME_TEMPLATE_OF_DATA_FRAMES using raw data
+      - switch DETECTOR to EIGER and set OVERLOAD
+      - force FRIEDEL'S_LAW=TRUE
+      - remove GENERIC_LIB / LIB
+      - comment MAXIMUM_NUMBER_OF_JOBS
+      - optionally override SPOT_RANGE / DATA_RANGE
+      - optionally append SPACE_GROUP_NUMBER / UNIT_CELL_CONSTANTS
+    """
     print(f"\n Processing XDS.INP: {input_path}")
     print(f" Dataset id inferred: {dataset_id}")
 
@@ -82,7 +101,7 @@ def transform_xds_inp_auto_template(
         print(f"  WARNING: {e}")
         return False
 
-    with open(input_path, "r") as f:
+    with open(input_path, 'r') as f:
         lines = f.readlines()
 
     new_lines = []
@@ -156,15 +175,15 @@ def transform_xds_inp_auto_template(
     shutil.copy2(input_path, backup_path)
     print(f"  Backed up original to: {backup_path}")
 
-    with open(input_path, "w") as f:
+    with open(input_path, 'w') as f:
         f.writelines(new_lines)
-
     print(f"  Overwritten: {input_path}")
+
     return True
 
 
 def run_xds(folder):
-    """Run xds_par in the given folder and capture log."""
+    """Run xds_par in the given folder and capture log (used in FULL mode)."""
     if not RUN_XDS:
         return True
 
@@ -193,9 +212,6 @@ def run_xds(folder):
 
 def run_pointless_aimless(folder):
     """Run pointless + aimless on XDS_ASCII.HKL using CCP4."""
-    if not RUN_AIMLESS:
-        return True
-
     hkl_path = os.path.join(folder, "XDS_ASCII.HKL")
     if not os.path.isfile(hkl_path):
         print("  WARNING: XDS_ASCII.HKL not found, skipping aimless.")
@@ -229,16 +245,22 @@ def run_pointless_aimless(folder):
     return True
 
 
-def batch_process_xds_inps(
+def full_pipeline(
     root_dir,
     raw_data_base_dir,
     prefix_hint=None,
     space_group_number=None,
     unit_cell_constants=None,
     data_range=None,
-    spot_range=None,
+    spot_range=None
 ):
-    print(f"\n=== Starting batch processing in: {root_dir} ===\n")
+    """
+    FULL MODE:
+      - rewrite XDS.INP
+      - run XDS
+      - run pointless + aimless
+    """
+    print(f"\n=== FULL MODE: Starting batch processing in: {root_dir} ===\n")
 
     processed = 0
     xds_ok = 0
@@ -273,14 +295,12 @@ def batch_process_xds_inps(
 
         processed += 1
 
-        # Run XDS
         if run_xds(subdir):
             xds_ok += 1
-            # Run Aimless only if XDS succeeded
-            if run_pointless_aimless(subdir):
+            if RUN_AIMLESS and run_pointless_aimless(subdir):
                 aimless_ok += 1
 
-    print("\n=== Batch processing complete ===")
+    print("\n=== FULL MODE: Batch processing complete ===")
     print(f" Total XDS.INP files processed: {processed}")
     if RUN_XDS:
         print(f" XDS successful:                  {xds_ok}")
@@ -288,13 +308,48 @@ def batch_process_xds_inps(
         print(f" Aimless successful:              {aimless_ok}")
 
 
+def aimless_only(root_dir):
+    """
+    AIMLESS-ONLY MODE:
+      - DOES NOT touch XDS.INP
+      - DOES NOT look at RAW_DATA_BASE_DIR
+      - DOES NOT run XDS
+      - ONLY: finds XDS_ASCII.HKL and runs pointless + aimless
+    """
+    print(f"\n=== AIMLESS-ONLY MODE: Searching under: {root_dir} ===\n")
+
+    aimless_ok = 0
+    aimless_fail = 0
+
+    for subdir, _, files in os.walk(root_dir):
+        if "XDS_ASCII.HKL" not in files:
+            continue
+
+        print(f"\n--- Aimless-only dataset: {subdir} ---")
+
+        if run_pointless_aimless(subdir):
+            aimless_ok += 1
+        else:
+            aimless_fail += 1
+
+    print("\n=== AIMLESS-ONLY MODE: Complete ===")
+    print(f" Datasets with XDS_ASCII.HKL: {aimless_ok + aimless_fail}")
+    print(f" Aimless successful:          {aimless_ok}")
+    print(f" Aimless failed:              {aimless_fail}")
+
+
 if __name__ == "__main__":
-    batch_process_xds_inps(
-        root_dir=ROOT_DIR,
-        raw_data_base_dir=RAW_DATA_BASE_DIR,
-        prefix_hint=PREFIX_HINT,
-        space_group_number=SPACE_GROUP_NUMBER,
-        unit_cell_constants=UNIT_CELL_CONSTANTS,
-        data_range=DATA_RANGE,
-        spot_range=SPOT_RANGE,
-    )
+    if MODE == "aimless-only":
+        aimless_only(ROOT_DIR)
+    elif MODE == "full":
+        full_pipeline(
+            root_dir=ROOT_DIR,
+            raw_data_base_dir=RAW_DATA_BASE_DIR,
+            prefix_hint=PREFIX_HINT,
+            space_group_number=SPACE_GROUP_NUMBER,
+            unit_cell_constants=UNIT_CELL_CONSTANTS,
+            data_range=DATA_RANGE,
+            spot_range=SPOT_RANGE,
+        )
+    else:
+        print(f"ERROR: Unknown MODE='{MODE}'. Use 'full' or 'aimless-only'.")
