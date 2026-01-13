@@ -24,7 +24,7 @@ PREFIX_HINT = None
 SPACE_GROUP_NUMBER = None          # e.g. "96"
 UNIT_CELL_CONSTANTS = None         # e.g. "50.0 60.0 70.0 90.0 90.0 120.0"
 
-# Optional overrides for XDS ranges, e.g. "1 360"
+# Optional overrides for XDS ranges, e.g. "1 3600"
 DATA_RANGE = None
 SPOT_RANGE = None
 
