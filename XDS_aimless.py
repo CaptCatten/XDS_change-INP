@@ -47,7 +47,7 @@ MODE = "aimless-only"
 XDS_TIMEOUT_SECONDS = 3600
 CCP4_TIMEOUT_SECONDS = 1800
 
-# One summary file for the whole run:
+# One summary file for the whole run: DO NOT CHANGE!!!
 SUMMARY_FILE = os.path.join(ROOT_DIR, "summary.txt")
 # ============================================================
 
