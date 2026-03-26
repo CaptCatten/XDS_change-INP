@@ -13,7 +13,7 @@ import subprocess
 RAW_DATA_BASE_DIR = "/path/to/raw_data/CC138A/"
 
 # Path of your processed data set (contains XDS.INP, XDS_ASCII.HKL, etc.)
-ROOT_DIR = "/home/lauren/Desktop/testing_ground/CC138A"
+ROOT_DIR = "/path/to/process/data/"
 
 # If your dataset has a common prefix, or you have a unique identifier
 # you want to restrict to, set it here (e.g. "TRIM72_"). Otherwise leave as None.
