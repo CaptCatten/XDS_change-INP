@@ -6,34 +6,53 @@ This script runs XDS -> CCP4 (pointless/aimless/ctruncate/freerflag)
 and optionally DIMPLE for ALL datasets under one visit.
 
 You MUST set these paths correctly:
-1) RAW_DATA_BASE_DIR
-   - Folder that contains your RAW diffraction images (.cbf.gz) for THIS visit.
-   - Under this folder you should see the SAME subfolders as under ROOT_DIR,
-      e.g.:
+/Data/Obelix_DataSafe2/BeamlineData/EMBL/20260425/RAW_DATA/CC464A/# 1) RAW_DATA_BASE_DIR
+    - Folder that contains your RAW diffraction images (.cbf.gz) for this run
+      (or set of runs).
+    - Under this folder you should have one subfolder per dataset / collection,
+      and those subfolders should match the processed-data layout under ROOT_DIR.
+
+   Example layouts:
           RAW_DATA_BASE_DIR/
-              06/DS1/*.cbf.gz
-              06/DS2/*.cbf.gz
-              07/DS1/*.cbf.gz
-    - Set this to where you rsynced the RAW_DATA from the synchrotron.
+              dataset1/*.cbf.gz
+              dataset2/*.cbf.gz
+
+   or, with extra levels (puck / pin / dataset):
+          RAW_DATA_BASE_DIR/
+              Puck01/Pin03/DS1/*.cbf.gz
+              Puck01/Pin04/DS2/*.cbf.gz
+
+   - Set this to the absolute path where your raw images live on your machine.
 
  2) ROOT_DIR
-    - TOP folder of your processed data for THIS visit.
-    - The script will search UNDER this folder for XDS processing directories
-      (folders that contain XDS.INP), e.g.:
+    - Top-level folder of the processed data you want this script to work on.
+    - The script will search RECURSIVELY under this folder for XDS processing
+      directories (any folder that contains XDS.INP), no matter how many
+      subfolder levels you have (visit, proposal, puck, pin, dataset, etc.).
+
+      Example layouts:
           ROOT_DIR/
-              06/DS1/xds_.../XDS.INP
-              06/DS2/xds_.../XDS.INP
-              07/DS1/xds_.../XDS.INP
+              dataset1/xds_.../XDS.INP
+              dataset2/xds_.../XDS.INP
 
-    - Set this to where your XDS runs live for the visit.
+      or, with puck/pin levels:
+          ROOT_DIR/
+              Puck01/Pin03/DS1/xds_.../XDS.INP
+              Puck01/Pin04/DS2/xds_.../XDS.INP
 
+    - Set this to the absolute path where your XDS runs are stored. The script
+      will walk through all subfolders under ROOT_DIR and try to process every
+      dataset it finds.
  IMPORTANT: folder layout must match
-    For each dataset, the subfolder layout under ROOT_DIR and RAW_DATA_BASE_DIR
-    MUST be the same. If you have:
-        ROOT_DIR/06/DS1/xds_.../XDS.INP
-    the script will look for images in:
-        RAW_DATA_BASE_DIR/06/DS1/*.cbf.gz
+    - For each dataset, the relative path under ROOT_DIR and RAW_DATA_BASE_DIR
+      must be the same.
+      If you have:
+          ROOT_DIR/Puck01/Pin03/DS1/xds_.../XDS.INP
+      the script will look for images in:
+          RAW_DATA_BASE_DIR/Puck01/Pin03/DS1/*.cbf.gz
 
+   - If your raw and processed folders do not follow the same subfolder layout,
+      this script will not find the right images automatically.
     If your layout does NOT look like this, STOP and talk to the script maintainer.
 
  3) PREFIX_HINT (optional)
