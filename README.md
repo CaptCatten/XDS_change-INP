@@ -70,3 +70,6 @@ You MUST set these paths correctly:
  While this script is running:
     DO NOT move, rename, or delete files or folders under RAW_DATA_BASE_DIR
     or ROOT_DIR. You will get confusing errors and half-finished results.
+
+Unfortunately the summary will not arrange the dataset, this is because the function
+os.walk() will take the file it can find first.
