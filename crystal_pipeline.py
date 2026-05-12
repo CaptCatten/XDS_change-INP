@@ -12,6 +12,11 @@ from dataclasses import dataclass
 # Underscore is the safest option as always
 # ============================================================
 
+# Path of your raw data root directory, grouped by dataset id
+RAW_DATA_BASE_DIR = "/path/to/raw_data/CC138A/"
+
+# Path of your processed data set (contains XDS.INP, XDS_ASCII.HKL, etc.)
+ROOT_DIR = "/path/to/process/data/"
 
 # Optional space group / cell (if known)
 # If you change this, also change the unit cell constants,
