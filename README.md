@@ -1,77 +1,112 @@
-the most current script is crystal_pipeline.py
+# crystal_pipeline.py
 
-HOW TO USE THIS SCRIPT (READ THIS FIRST)
+This script runs XDS -> CCP4 (`pointless`, `aimless`, `ctruncate`, `freerflag`) and optionally DIMPLE for all datasets under one visit.
 
-This script runs XDS -> CCP4 (pointless/aimless/ctruncate/freerflag)
-and optionally DIMPLE for ALL datasets under one visit.
+## Warning
 
-You MUST set these paths correctly:
-/Data/Obelix_DataSafe2/BeamlineData/EMBL/20260425/RAW_DATA/CC464A/# 1) RAW_DATA_BASE_DIR
-    - Folder that contains your RAW diffraction images (.cbf.gz) for this run
-      (or set of runs).
-    - Under this folder you should have one subfolder per dataset / collection,
-      and those subfolders should match the processed-data layout under ROOT_DIR.
-    - Best practice is too have a directory of your protein name BEFORE the puck name 
-      and have the script iterate through all the puck
+Before running this script, make sure the raw-data tree and processed-data tree use the same relative folder layout.[1]
+Do **not** move, rename, or delete files or folders under `RAW_DATA_BASE_DIR` or `ROOT_DIR` while the script is running, because recursive directory traversal can otherwise produce confusing partial results.[1][2]
+If your raw and processed folder trees do not match, stop and talk to the script maintainer before using this script.
 
-   Example layouts:
-          RAW_DATA_BASE_DIR/
-              dataset1/*.cbf.gz
-              dataset2/*.cbf.gz
+## Required paths
 
-   or, with extra levels (puck / pin / dataset):
-          RAW_DATA_BASE_DIR/
-              Puck01/Pin03/DS1/*.cbf.gz
-              Puck01/Pin04/DS2/*.cbf.gz
+### `RAW_DATA_BASE_DIR`
 
-   - Set this to the absolute path where your raw images live on your machine.
+Set this to the absolute path containing the raw diffraction images (`.cbf.gz`) for the run or set of runs.
+Under this folder, you should have one subfolder tree per dataset or collection, and that tree must match the processed-data layout under `ROOT_DIR`.
+A typical example is:
 
- 2) ROOT_DIR
-    - Top-level folder of the processed data you want this script to work on.
-    - The script will search RECURSIVELY under this folder for XDS processing
-      directories (any folder that contains XDS.INP), no matter how many
-      subfolder levels you have (visit, proposal, puck, pin, dataset, etc.).
+```text
+/Data/Obelix_DataSafe2/BeamlineData/EMBL/20260425/RAW_DATA/CC464A/
+```
 
-      Example layouts:
-          ROOT_DIR/
-              dataset1/xds_.../XDS.INP
-              dataset2/xds_.../XDS.INP
+Best practice is to keep a stable directory hierarchy, for example a protein directory before the puck directory, and then let the script iterate through all puck subfolders.
 
-      or, with puck/pin levels:
-          ROOT_DIR/
-              Puck01/Pin03/DS1/xds_.../XDS.INP
-              Puck01/Pin04/DS2/xds_.../XDS.INP
+Example layouts:
 
-    - Set this to the absolute path where your XDS runs are stored. The script
-      will walk through all subfolders under ROOT_DIR and try to process every
-      dataset it finds.
- IMPORTANT: folder layout must match
-    - For each dataset, the relative path under ROOT_DIR and RAW_DATA_BASE_DIR
-      must be the same.
-      If you have:
-          ROOT_DIR/Puck01/Pin03/DS1/xds_.../XDS.INP
-      the script will look for images in:
-          RAW_DATA_BASE_DIR/Puck01/Pin03/DS1/*.cbf.gz
+```text
+RAW_DATA_BASE_DIR/
+├── dataset1/*.cbf.gz
+└── dataset2/*.cbf.gz
+```
 
-   - If your raw and processed folders do not follow the same subfolder layout,
-      this script will not find the right images automatically.
-    If your layout does NOT look like this, STOP and talk to the script maintainer.
+or
 
- 3) PREFIX_HINT (optional)
-    - Only touch this if you know your image filenames.
-    - If all your images start with a common prefix and there are other .cbf.gz
-      files in the same folder, set PREFIX_HINT to that prefix, e.g.:
-          TRIM72_00001.cbf.gz -> PREFIX_HINT = "TRIM72_"
-    - If you are not sure, LEAVE THIS AS None.
+```text
+RAW_DATA_BASE_DIR/
+└── Puck01/
+    ├── Pin03/DS1/*.cbf.gz
+    └── Pin04/DS2/*.cbf.gz
+```
 
- 4) MODE
-    - "full":        rewrite XDS.INP, run XDS, run CCP4, (optional) DIMPLE
-    - "aimless-only":skip XDS, only run CCP4 (and optional DIMPLE)
-    - "dimple-only": only run DIMPLE on existing Final_with_FreeR.mtz
+### `ROOT_DIR`
 
- While this script is running:
-    DO NOT move, rename, or delete files or folders under RAW_DATA_BASE_DIR
-    or ROOT_DIR. You will get confusing errors and half-finished results.
+Set this to the absolute path containing the processed data you want the script to work on.
+The script searches **recursively** under this folder for XDS processing directories, defined as any folder containing `XDS.INP`.[3]
+This means the script will find datasets no matter how many folder levels you use, such as visit, proposal, puck, pin, dataset, or `xds_*` subdirectories.[3]
 
-Unfortunately the summary will not arrange the dataset, this is because the function
-os.walk() will take the file it can find first.
+Example layouts:
+
+```text
+ROOT_DIR/
+├── dataset1/xds_run/XDS.INP
+└── dataset2/xds_run/XDS.INP
+```
+
+or
+
+```text
+ROOT_DIR/
+└── Puck01/
+    ├── Pin03/DS1/xds_run/XDS.INP
+    └── Pin04/DS2/xds_run/XDS.INP
+```
+
+## Folder-layout rule
+
+This script depends on matching **relative paths** between `ROOT_DIR` and `RAW_DATA_BASE_DIR`.
+For each dataset, the relative path below `ROOT_DIR` must be the same as the relative path below `RAW_DATA_BASE_DIR`.
+
+Example:
+
+```text
+ROOT_DIR/Puck01/Pin03/DS1/xds_run/XDS.INP
+RAW_DATA_BASE_DIR/Puck01/Pin03/DS1/*.cbf.gz
+```
+
+If your raw and processed folders do not follow the same subfolder layout, this script will not find the correct raw images automatically.
+If your layout does **not** look like this, stop and contact the script maintainer.
+
+## `PREFIX_HINT` (optional)
+
+Only change this if you know your image filenames.
+If all images from a dataset start with a common prefix and there are other `.cbf.gz` files in the same folder, set `PREFIX_HINT` to that prefix.
+
+Example:
+
+```text
+TRIM72_00001.cbf.gz  ->  PREFIX_HINT = "TRIM72_"
+```
+
+If you are not sure, leave this as `None`.
+
+## `MODE`
+
+Available modes:
+
+- `"full"`: rewrite `XDS.INP`, run XDS, run CCP4, and optionally DIMPLE.
+- `"aimless-only"`: skip XDS and run CCP4, and optionally DIMPLE.
+- `"dimple-only"`: run DIMPLE only on existing `Final_with_FreeR.mtz` files.
+
+## Processing order
+
+The script walks the directory tree recursively using `os.walk()`.[3]
+The order returned by `os.walk()` is not something users should treat as meaningful unless directory and file names are explicitly sorted in code.[1][2]
+Because of that, the summary file may not list datasets in the order you expect.
+
+## Practical notes
+
+- Use absolute paths.
+- Avoid spaces or hyphens in newly created file or folder names; underscores are safer.
+- Do not reorganize the copied beamline directory tree unless you also preserve the raw/processed path mapping exactly.
+- This is a lab utility script with strict assumptions; if those assumptions are violated, failures are expected rather than surprising.
