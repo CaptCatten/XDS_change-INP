@@ -11,6 +11,8 @@ You MUST set these paths correctly:
       (or set of runs).
     - Under this folder you should have one subfolder per dataset / collection,
       and those subfolders should match the processed-data layout under ROOT_DIR.
+    - Best practice is too have a directory of your protein name BEFORE the puck name 
+      and have the script iterate through all the puck
 
    Example layouts:
           RAW_DATA_BASE_DIR/
