@@ -4,8 +4,8 @@ This script runs XDS -> CCP4 (`pointless`, `aimless`, `ctruncate`, `freerflag`) 
 
 ## Warning
 
-Before running this script, make sure the raw-data tree and processed-data tree use the same relative folder layout.[1]
-Do **not** move, rename, or delete files or folders under `RAW_DATA_BASE_DIR` or `ROOT_DIR` while the script is running, because recursive directory traversal can otherwise produce confusing partial results.[1][2]
+Before running this script, make sure the raw-data tree and processed-data tree use the same relative folder layout.
+Do **not** move, rename, or delete files or folders under `RAW_DATA_BASE_DIR` or `ROOT_DIR` while the script is running, because recursive directory traversal can otherwise produce confusing partial results.
 If your raw and processed folder trees do not match, stop and talk to the script maintainer before using this script.
 
 ## Required paths
