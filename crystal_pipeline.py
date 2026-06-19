@@ -10,6 +10,8 @@ from dataclasses import dataclass
 # Paths should be absolute.
 # When naming files or folder please do not use space or hyphens
 # Underscore is the safest option as always
+# DO NOT MOVE ANY FILES OR FOLDER THAT THIS SCRIPT IS WORKING ON
+# WHILE EVERYTHING IT IS RUNNING
 # ============================================================
 
 # Path of your raw data root directory, grouped by dataset id
