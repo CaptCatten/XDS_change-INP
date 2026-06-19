@@ -42,8 +42,8 @@ RAW_DATA_BASE_DIR/
 ### `ROOT_DIR`
 
 Set this to the absolute path containing the processed data you want the script to work on.
-The script searches **recursively** under this folder for XDS processing directories, defined as any folder containing `XDS.INP`.[3]
-This means the script will find datasets no matter how many folder levels you use, such as visit, proposal, puck, pin, dataset, or `xds_*` subdirectories.[3]
+The script searches **recursively** under this folder for XDS processing directories, defined as any folder containing `XDS.INP`.
+This means the script will find datasets no matter how many folder levels you use, such as visit, proposal, puck, pin, dataset, or `xds_*` subdirectories.
 
 Example layouts:
 
@@ -100,8 +100,8 @@ Available modes:
 
 ## Processing order
 
-The script walks the directory tree recursively using `os.walk()`.[3]
-The order returned by `os.walk()` is not something users should treat as meaningful unless directory and file names are explicitly sorted in code.[1][2]
+The script walks the directory tree recursively using `os.walk()`.
+The order returned by `os.walk()` is not something users should treat as meaningful unless directory and file names are explicitly sorted in code.
 Because of that, the summary file may not list datasets in the order you expect.
 
 ## Practical notes
