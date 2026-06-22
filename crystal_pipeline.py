@@ -511,17 +511,30 @@ def run_dimple(folder, pdb, outdir, env: PipelineEnv):
         print(f"  Check: {os.path.join(folder, 'dimple.log')}")
         return -1
 
-    final_pdb = os.path.join(folder, outdir, "final.pdb")
-    if not os.path.isfile(final_pdb):
-        print(f"DIMPLE finished but final.pdb missing for '{folder_name}'")
-        print(f"  Check: {os.path.join(folder, 'dimple.log')}")
-        return -1
+    # First try expected location
+    expected_final = os.path.join(folder, outdir, "final.pdb")
+    final_pdb = expected_final if os.path.isfile(expected_final) else None
+
+    # Fallback: shallow search under folder (flexible)
+    if final_pdb is None:
+        candidates = []
+        for root, _, files in os.walk(folder):
+            if "final.pdb" in files:
+                candidates.append(os.path.join(root, "final.pdb"))
+        if not candidates:
+            print(f"DIMPLE finished but final.pdb missing for '{folder_name}'")
+            print(f"  Expected at: {expected_final}")
+            print(f"  Check: {os.path.join(folder, 'dimple.log')}")
+            return -1
+        # If multiple, pick the shortest/closest path deterministically
+        candidates.sort(key=len)
+        final_pdb = candidates[0]
+        print(f"Using final.pdb at {final_pdb}")
 
     blobs = parse_dimple_blobs(folder)
     blob_str = str(blobs) if blobs >= 0 else "unknown"
     print(f"DIMPLE OK for '{folder_name}' -> blobs: {blob_str}")
     return blobs
-
 
 # ============================================================
 # PIPELINE MODES
